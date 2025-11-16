@@ -1,4 +1,4 @@
-package ma.emsi.chidoub.tp2_web_redachidoub.jsf;
+package ma.emsi.chidoub.tp4_web_redachidoub.jsf;
 
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
@@ -6,7 +6,7 @@ import jakarta.faces.model.SelectItem;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import ma.emsi.chidoub.tp2_web_redachidoub.llm.LlmClient;
+import ma.emsi.chidoub.tp4_web_redachidoub.llm.LlmClient;
 
 import java.io.Serializable;
 import java.util.ArrayList;
