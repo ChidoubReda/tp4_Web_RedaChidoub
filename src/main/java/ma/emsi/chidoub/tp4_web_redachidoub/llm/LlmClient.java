@@ -3,7 +3,7 @@ package ma.emsi.chidoub.tp4_web_redachidoub.llm;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
 import dev.langchain4j.data.document.parser.apache.tika.ApacheTikaDocumentParser;
-import dev.langchain4j.data.document.splitter.DocumentSplitter;
+import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.SystemMessage;
@@ -12,7 +12,7 @@ import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.embedding.bge.small.en.v15.BgeSmallEnV15EmbeddingModel;
+import dev.langchain4j.model.embedding.onnx.bgesmallenv15.BgeSmallEnV15EmbeddingModel;
 import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import dev.langchain4j.model.output.Response;
 import dev.langchain4j.rag.DefaultRetrievalAugmentor;
@@ -20,15 +20,14 @@ import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.rag.content.retriever.WebSearchContentRetriever;
-import dev.langchain4j.rag.query.DefaultQueryRouter;
-import dev.langchain4j.rag.query.QueryRouter;
+import dev.langchain4j.rag.query.router.DefaultQueryRouter;
+import dev.langchain4j.rag.query.router.QueryRouter;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import dev.langchain4j.web.search.WebSearchEngine;
 import dev.langchain4j.web.search.tavily.TavilyWebSearchEngine;
 import jakarta.enterprise.context.ApplicationScoped;
-import ma.emsi.chidoub.tp4_web_redachidoub.llm.Assistant;
 
 import java.net.URISyntaxException;
 import java.nio.file.Path;
@@ -40,8 +39,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Service d'accès centralisé au modèle de langage Gemini via LangChain4j.
- * Version TP4 : RAG multi-documents + recherche Web Tavily + logging.
+ * Client centralisé pour Gemini + RAG (docs locaux + Tavily Web).
  */
 @ApplicationScoped
 public class LlmClient {
@@ -52,7 +50,7 @@ public class LlmClient {
 
     public LlmClient() {
 
-        configureLogger(); // Test 2
+        configureLogger(); // Test 2 - logs détaillés
 
         // --- ChatModel Gemini ---
         String geminiKey = System.getenv("GEMINI_API_KEY");
@@ -66,7 +64,7 @@ public class LlmClient {
                 .apiKey(geminiKey)
                 .modelName("gemini-2.0-flash")
                 .temperature(0.8)
-                .logRequestsAndResponses(true) // logs détaillés (Test 2)
+                .logRequestsAndResponses(true) // logs requêtes/réponses
                 .build();
 
         // --- PHASE 1 : ingestion des documents pour le RAG ---
@@ -78,7 +76,7 @@ public class LlmClient {
 
         // Ces fichiers doivent être dans src/main/resources
         ingestResource("/rag.pdf", storeRag, embeddingModel);
-        ingestResource("/autre.txt", storeAutre, embeddingModel); // ou autre.pdf si tu préfères
+        ingestResource("/autre.txt", storeAutre, embeddingModel); // ou /autre.pdf si tu préfères
 
         ContentRetriever ragRetriever = EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(storeRag)
@@ -115,7 +113,6 @@ public class LlmClient {
         if (webRetriever != null) {
             queryRouter = new DefaultQueryRouter(List.of(ragRetriever, autreRetriever, webRetriever));
         } else {
-            // si pas de clé Tavily, on reste sur les documents locaux
             queryRouter = new DefaultQueryRouter(List.of(ragRetriever, autreRetriever));
         }
 
@@ -130,7 +127,7 @@ public class LlmClient {
         assistant = AiServices.builder(Assistant.class)
                 .chatModel(chatModel)
                 .chatMemory(chatMemory)
-                .retrievalAugmentor(retrievalAugmentor) // ici on branche le RAG
+                .retrievalAugmentor(retrievalAugmentor) // branche le RAG
                 .build();
     }
 
@@ -163,7 +160,7 @@ public class LlmClient {
         }
     }
 
-    // Configuration du logger LangChain4j (Test 2)
+    // Configuration du logger LangChain4j
     private void configureLogger() {
         Logger packageLogger = Logger.getLogger("dev.langchain4j");
         packageLogger.setLevel(Level.FINE);
@@ -172,7 +169,7 @@ public class LlmClient {
         packageLogger.addHandler(handler);
     }
 
-    // === API utilisée par le backing bean Bb ===
+    // === API utilisée par Bb ===
 
     public void setSystemRole(String role) {
         this.systemRole = role;
